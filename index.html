@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flappy Apex</title>
+
+  <!-- GameMonetize SDK Integration -->
+  <script type="text/javascript">
+    window.SDK_OPTIONS = {
+        gameId: "5igq4qp23c8ahtj8vqjovus77pfetmms",
+        onEvent: function (a) {
+            switch (a.name) {
+                case "SDK_GAME_PAUSE":
+                    isGamePaused = true;
+                    soundEnabled = false;
+                    break;
+                case "SDK_GAME_START":
+                    isGamePaused = false;
+                    soundEnabled = true;
+                    break;
+                case "SDK_READY":
+                    console.log("GameMonetize SDK Ready");
+                    break;
+            }
+        }
+    };
+    (function (a, b, c) {
+        var d = a.getElementsByTagName(b)[0];
+        a.getElementById(c) || (a = a.createElement(b), a.id = c, a.src = "https://api.gamemonetize.com/sdk.js", d.parentNode.insertBefore(a, d));
+    })(document, "script", "gamemonetize-sdk");
+  </script>
+
+  <!-- Tailwind CSS for modern styling -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Firebase App & Firestore SDKs (CDN Version) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      background-color: #0b0f19;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+    /* Custom Scrollbar for Leaderboard */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.5);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="h-[100dvh] w-screen flex flex-col items-center justify-center text-white">
+
+  <!-- Main Game Container (Fully Responsive for Mobile & Desktop) -->
+  <div class="relative w-full h-full sm:w-[95vw] sm:max-w-[1024px] sm:aspect-[16/9] sm:max-h-[85vh] bg-slate-900 sm:rounded-2xl shadow-2xl overflow-hidden border-0 sm:border border-slate-800 flex flex-col">
+    
+    <!-- Top HUD Header -->
+    <div id="game-header" class="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-3 sm:p-4 pointer-events-none">
+      <!-- Score Display -->
+      <div id="score-display" class="hidden pointer-events-auto bg-slate-900/80 backdrop-blur border border-sky-500/30 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl shadow-lg flex items-center gap-2 sm:gap-3">
+        <span class="text-[10px] sm:text-xs uppercase tracking-wider text-sky-400 font-orbitron font-bold">Score</span>
+        <span id="current-score" class="font-orbitron text-xl sm:text-2xl font-black text-white">0</span>
+      </div>
+      <div id="score-spacer" class="w-20 sm:w-24"></div>
+
+      <!-- Action Buttons (Main Menu / Leaderboard / Sound) -->
+      <div class="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+        <button id="header-menu-btn" onclick="returnToMenu()" class="hidden bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-orbitron font-bold transition flex items-center gap-1 shadow-lg">
+          🏠 Menu
+        </button>
+        <button onclick="toggleLeaderboard()" class="bg-slate-800/90 hover:bg-slate-700 border border-sky-500/30 text-sky-400 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-orbitron font-bold transition flex items-center gap-1 shadow-lg">
+          🏆 Ranks
+        </button>
+        <button id="audio-toggle" onclick="toggleAudio()" class="bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs sm:text-sm transition shadow-lg">
+          🔊
+        </button>
+      </div>
+    </div>
+
+    <!-- Canvas Layer -->
+    <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+    <!-- Start / Main Menu Screen Overlay -->
+    <div id="start-screen" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-b from-sky-950/60 via-slate-950/80 to-slate-950/95 backdrop-blur-[2px] p-4 sm:p-6">
+      
+      <!-- Title -->
+      <div class="text-center mb-4 sm:mb-6">
+        <h1 class="font-orbitron text-3xl sm:text-5xl md:text-6xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-white to-sky-200 drop-shadow-[0_4px_12px_rgba(56,189,248,0.3)]">
+          FLAPPY APEX
+        </h1>
+        <p class="text-sky-300/80 text-[10px] sm:text-xs font-medium tracking-widest mt-1 sm:mt-2 uppercase">
+          Tap Screen • Click Mouse • Spacebar to Jump
+        </p>
+      </div>
+
+      <!-- Call Sign Input Card -->
+      <div class="bg-slate-900/95 border border-slate-700/80 p-4 sm:p-6 rounded-2xl shadow-2xl w-full max-w-sm backdrop-blur-md">
+        <label class="block text-[10px] sm:text-xs uppercase font-orbitron tracking-wider text-slate-400 mb-1.5 sm:mb-2">Pilot Call Sign</label>
+        <div class="relative mb-2">
+          <input type="text" id="callsign-input" maxlength="12" placeholder="Enter Call Sign..." value="ApexAce"
+            class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white font-semibold text-xs sm:text-sm outline-none transition tracking-wide shadow-inner">
+        </div>
+        <!-- Error Message Container -->
+        <div id="name-error" class="hidden text-rose-400 text-xs font-semibold mb-3 px-1">
+          Username already taken
+        </div>
+
+        <button onclick="checkAndStartFlight()" 
+          class="w-full bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-orbitron font-bold py-3 sm:py-3.5 px-6 rounded-xl shadow-lg shadow-rose-500/25 transition transform active:scale-[0.98] flex items-center justify-center gap-2 text-xs sm:text-sm">
+          ✈️ LAUNCH FLIGHT
+        </button>
+        <div class="flex justify-between items-center mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400 px-1">
+          <span id="best-score-display">🏆 Best: 0</span>
+          <span class="text-sky-400 font-medium">📱 Mobile & PC</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Game Over Screen Overlay -->
+    <div id="gameover-screen" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 sm:p-6">
+      <div class="bg-slate-900 border border-slate-700 p-5 sm:p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+        <h2 class="font-orbitron text-xl sm:text-2xl font-bold text-rose-500 mb-1">MISSION FAILED</h2>
+        <p class="text-slate-400 text-[11px] sm:text-xs mb-4 sm:mb-6">Your flight was terminated upon impact.</p>
+
+        <div class="bg-slate-950 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-800 flex justify-around">
+          <div>
+            <div class="text-[9px] sm:text-[10px] uppercase font-orbitron text-slate-500">Score</div>
+            <div id="final-score" class="font-orbitron text-xl sm:text-2xl font-bold text-white">0</div>
+          </div>
+          <div class="w-[1px] bg-slate-800"></div>
+          <div>
+            <div class="text-[9px] sm:text-[10px] uppercase font-orbitron text-slate-500">Best</div>
+            <div id="final-best" class="font-orbitron text-xl sm:text-2xl font-bold text-sky-400">0</div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button onclick="restartFlight()" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-orbitron font-bold py-2.5 sm:py-3 rounded-xl shadow-lg shadow-sky-500/25 transition text-xs sm:text-sm">
+            🔄 PLAY AGAIN
+          </button>
+          <button onclick="returnToMenu()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-orbitron font-bold py-2 sm:py-2.5 rounded-xl transition text-[11px] sm:text-xs">
+            🏠 MAIN MENU
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaderboard Modal Drawer -->
+    <div id="leaderboard-modal" class="hidden absolute inset-0 z-40 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+      <div class="bg-slate-900 border border-sky-500/30 w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
+        <div class="p-3 sm:p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+          <div class="flex items-center gap-2">
+            <span class="text-lg sm:text-xl">🏆</span>
+            <h3 class="font-orbitron font-bold text-sm sm:text-base text-white">Global Pilot Rankings</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="fetchLeaderboard()" class="text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-sky-400 font-orbitron px-2 sm:px-2.5 py-1.5 rounded-lg border border-sky-500/20 transition flex items-center gap-1">
+              🔄 Refresh
+            </button>
+            <button onclick="toggleLeaderboard()" class="text-slate-400 hover:text-white text-xs sm:text-sm font-bold px-2.5 py-1.5 bg-slate-800 rounded-lg">✕</button>
+          </div>
+        </div>
+        <div id="leaderboard-list" class="p-3 sm:p-4 overflow-y-auto flex-1 space-y-2">
+          <div class="text-center text-slate-500 text-xs sm:text-sm py-6">Connecting to Firebase network...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Subtle Footer Badge -->
+    <div class="absolute bottom-1 sm:bottom-2 left-0 right-0 z-10 text-center pointer-events-none">
+      <span class="inline-block bg-slate-950/60 backdrop-blur border border-slate-800/80 text-[9px] sm:text-[10px] font-orbitron tracking-widest text-slate-400 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full">
+        🟢 CROSS-PLATFORM • 60 FPS ENGINE
+      </span>
+    </div>
+
+  </div>
+
+  <!-- Game Logic Script -->
+  <script>
+    // --- FIREBASE CONFIGURATION ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBOYhgtv60QLR2n8L1Sg9fE_ZVL0Iv5wHI",
+      authDomain: "flappy-apex.firebaseapp.com",
+      projectId: "flappy-apex",
+      storageBucket: "flappy-apex.firebasestorage.app",
+      messagingSenderId: "1034019070150",
+      appId: "1:1034019070150:web:48bf395e8af6de249637c7",
+      measurementId: "G-6ZFCRY427W"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // --- GAME ENGINE & STATE ---
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Fixed internal resolution for consistent 16:9 gameplay physics
+    canvas.width = 1024;
+    canvas.height = 576;
+
+    let gameState = "MENU"; // MENU, PLAYING, GAMEOVER
+    let isGamePaused = false;
+    let score = 0;
+    let bestScore = parseInt(localStorage.getItem("flappy_apex_best") || "0");
+    let pilotCallSign = "ApexAce";
+    let soundEnabled = true;
+
+    document.getElementById("best-score-display").innerText = `🏆 Best: ${bestScore}`;
+
+    // Bird (Apex Pilot) Object
+    let bird = {
+      x: 200,
+      y: 288,
+      radius: 22,
+      velocity: 0,
+      gravity: 0.38,
+      lift: -8.2,
+      rotation: 0
+    };
+
+    // Obstacles & Background Arrays
+    let pipes = [];
+    let clouds = [
+      { x: 100, y: 80, speed: 0.5, scale: 1 },
+      { x: 500, y: 150, speed: 0.7, scale: 0.8 },
+      { x: 850, y: 70, speed: 0.4, scale: 1.2 }
+    ];
+
+    let frameCount = 0;
+
+    // --- INPUT CONTROLS (DESKTOP + MOBILE TOUCH) ---
+    function triggerJump(e) {
+      if (isGamePaused) return;
+      if (e) {
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('#leaderboard-modal')) return;
+      }
+      if (gameState === "PLAYING") {
+        bird.velocity = bird.lift;
+        playJumpSound();
+      }
+    }
+
+    // Keyboard support (Space / Arrow Up)
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space" || e.code === "ArrowUp") {
+        e.preventDefault();
+        triggerJump();
+      }
+    });
+
+    // Mouse click support
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button === 0) {
+        triggerJump(e);
+      }
+    });
+
+    // Mobile touch support
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      triggerJump(e);
+    }, { passive: false });
+
+    // --- NAVIGATION & UI FLOW ---
+    function getDeviceId() {
+      let deviceId = localStorage.getItem("flappy_apex_device_id");
+      if (!deviceId) {
+        deviceId = "dev_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
+        localStorage.setItem("flappy_apex_device_id", deviceId);
+      }
+      return deviceId;
+    }
+
+    function checkAndStartFlight() {
+      const inputVal = document.getElementById("callsign-input").value.trim();
+      const errorEl = document.getElementById("name-error");
+
+      if (!inputVal) return;
+
+      const newDocId = inputVal.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const deviceId = getDeviceId();
+
+      // Check Firebase to see if the name is taken by ANOTHER device
+      db.collection("leaderboard").doc(newDocId).get().then((doc) => {
+        if (doc.exists && doc.data().deviceId !== deviceId) {
+          errorEl.style.display = "block";
+        } else {
+          errorEl.style.display = "none";
+          pilotCallSign = inputVal;
+          startFlight();
+        }
+      }).catch((err) => {
+        console.error("Error checking username:", err);
+        errorEl.style.display = "none";
+        pilotCallSign = inputVal;
+        startFlight();
+      });
+    }
+
+    function startFlight() {
+      gameState = "PLAYING";
+      score = 0;
+      bird.y = canvas.height / 2;
+      bird.velocity = 0;
+      pipes = [];
+      frameCount = 0;
+
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("gameover-screen").style.display = "none";
+      document.getElementById("score-display").style.display = "flex";
+      document.getElementById("header-menu-btn").style.display = "flex";
+      document.getElementById("current-score").innerText = "0";
+    }
+
+    function returnToMenu() {
+      gameState = "MENU";
+      document.getElementById("start-screen").style.display = "flex";
+      document.getElementById("gameover-screen").style.display = "none";
+      document.getElementById("score-display").style.display = "none";
+      document.getElementById("header-menu-btn").style.display = "none";
+      document.getElementById("leaderboard-modal").style.display = "none";
+    }
+
+    function restartFlight() {
+      startFlight();
+    }
+
+    function gameOver() {
+      gameState = "GAMEOVER";
+      document.getElementById("gameover-screen").style.display = "flex";
+      document.getElementById("final-score").innerText = score;
+      
+      // Trigger GameMonetize Banner/Interstitial Ad
+      if (typeof sdk !== 'undefined' && typeof sdk.showBanner !== 'undefined') {
+          sdk.showBanner();
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem("flappy_apex_best", bestScore);
+        document.getElementById("best-score-display").innerText = `🏆 Best: ${bestScore}`;
+      }
+      document.getElementById("final-best").innerText = bestScore;
+
+      if (score > 0) {
+        submitScoreToFirebase(pilotCallSign, score);
+      }
+    }
+
+    function toggleLeaderboard() {
+      const modal = document.getElementById("leaderboard-modal");
+      if (modal.style.display === "flex") {
+        modal.style.display = "none";
+      } else {
+        modal.style.display = "flex";
+        fetchLeaderboard();
+      }
+    }
+
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      document.getElementById("audio-toggle").innerText = soundEnabled ? "🔊" : "🔇";
+    }
+
+    // --- AUDIO SYNTHESIS ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playJumpSound() {
+      if (!soundEnabled) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(580, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    function playScoreSound() {
+      if (!soundEnabled) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(584.37, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.06);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    }
+
+    function playCrashSound() {
+      if (!soundEnabled) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
+
+    // --- FIREBASE DATABASE FUNCTIONS ---
+    function submitScoreToFirebase(name, finalScore) {
+      const deviceId = getDeviceId();
+      const newDocId = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const oldDocId = localStorage.getItem("flappy_apex_current_doc_id");
+
+      const newDocRef = db.collection("leaderboard").doc(newDocId);
+
+      newDocRef.get().then((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data.deviceId === deviceId) {
+            if (finalScore > data.score) {
+              newDocRef.update({
+                score: finalScore,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+              });
+            }
+          }
+        } else {
+          if (oldDocId && oldDocId !== newDocId) {
+            db.collection("leaderboard").doc(oldDocId).delete().catch(err => console.error("Error clearing old name:", err));
+          }
+
+          newDocRef.set({
+            name: name,
+            score: finalScore,
+            deviceId: deviceId,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          localStorage.setItem("flappy_apex_current_doc_id", newDocId);
+        }
+      }).catch(err => console.error("Firebase sync error:", err));
+    }
+
+    function fetchLeaderboard() {
+      const listEl = document.getElementById("leaderboard-list");
+      listEl.innerHTML = `<div class="text-center text-slate-400 text-xs sm:text-sm py-6">Loading rankings...</div>`;
+
+      db.collection("leaderboard")
+        .orderBy("score", "desc")
+        .limit(10)
+        .get()
+        .then((querySnapshot) => {
+          if (querySnapshot.empty) {
+            listEl.innerHTML = `<div class="text-center text-slate-500 text-xs sm:text-sm py-6">No flights recorded yet. Be the first!</div>`;
+            return;
+          }
+          let html = "";
+          let rank = 1;
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            let medalColor = "text-slate-400 bg-slate-800/50";
+            if (rank === 1) medalColor = "text-amber-400 bg-amber-500/10 border border-amber-500/30";
+            else if (rank === 2) medalColor = "text-slate-200 bg-slate-300/10 border border-slate-300/30";
+            else if (rank === 3) medalColor = "text-amber-600 bg-amber-700/10 border border-amber-600/30";
+
+            html += `
+              <div class="flex items-center justify-between p-2.5 sm:p-3 rounded-xl ${medalColor} backdrop-blur">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                  <span class="font-orbitron font-bold text-xs sm:text-sm w-6 text-center">#${rank}</span>
+                  <span class="font-semibold text-white text-xs sm:text-sm tracking-wide">${escapeHtml(data.name || "Pilot")}</span>
+                </div>
+                <span class="font-orbitron font-black text-sky-400 text-sm sm:text-base">${data.score}</span>
+              </div>
+            `;
+            rank++;
+          });
+          listEl.innerHTML = html;
+        })
+        .catch((error) => {
+          console.error("Firebase read error:", error);
+          listEl.innerHTML = `<div class="text-center text-rose-400 text-[11px] sm:text-xs py-6">Failed to load leaderboard. Check Firebase rules & configuration.</div>`;
+        });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // --- GAME LOOP & PHYSICS ---
+    function update() {
+      if (isGamePaused) return;
+
+      clouds.forEach(cloud => {
+        cloud.x -= cloud.speed;
+        if (cloud.x < -150) cloud.x = canvas.width + 150;
+      });
+
+      if (gameState !== "PLAYING") return;
+
+      frameCount++;
+
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+      bird.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (bird.velocity / 12)));
+
+      if (bird.y + bird.radius >= canvas.height - 40) {
+        bird.y = canvas.height - 40 - bird.radius;
+        playCrashSound();
+        gameOver();
+      }
+      if (bird.y - bird.radius <= 0) {
+        bird.y = bird.radius;
+        bird.velocity = 0;
+      }
+
+      if (frameCount % 110 === 0) {
+        let minHeight = 80;
+        let maxHeight = canvas.height - 240;
+        let topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+        
+        pipes.push({
+          x: canvas.width,
+          topHeight: topHeight,
+          bottomY: topHeight + 180,
+          width: 76,
+          passed: false
+        });
+      }
+
+      for (let i = pipes.length - 1; i >= 0; i--) {
+        pipes[i].x -= 3.2;
+
+        let p = pipes[i];
+        if (
+          bird.x + bird.radius > p.x &&
+          bird.x - bird.radius < p.x + p.width &&
+          (bird.y - bird.radius < p.topHeight || bird.y + bird.radius > p.bottomY)
+        ) {
+          playCrashSound();
+          gameOver();
+        }
+
+        if (!p.passed && p.x + p.width < bird.x) {
+          p.passed = true;
+          score += 1;
+          document.getElementById("current-score").innerText = score;
+          playScoreSound();
+        }
+
+        if (p.x + p.width < -50) {
+          pipes.splice(i, 1);
+        }
+      }
+    }
+
+    // --- RENDER ENGINE ---
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      skyGrad.addColorStop(0, "#0369a1");
+      skyGrad.addColorStop(0.5, "#0284c7");
+      skyGrad.addColorStop(1, "#38bdf8");
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      clouds.forEach(cloud => {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.beginPath();
+        ctx.arc(cloud.x, cloud.y, 40 * cloud.scale, 0, Math.PI * 2);
+        ctx.arc(cloud.x + 30 * cloud.scale, cloud.y - 15 * cloud.scale, 30 * cloud.scale, 0, Math.PI * 2);
+        ctx.arc(cloud.x + 65 * cloud.scale, cloud.y, 35 * cloud.scale, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.fillStyle = "#0c4a6e";
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height - 40);
+      ctx.lineTo(180, canvas.height - 240);
+      ctx.lineTo(380, canvas.height - 40);
+      ctx.lineTo(620, canvas.height - 210);
+      ctx.lineTo(880, canvas.height - 40);
+      ctx.lineTo(1024, canvas.height - 180);
+      ctx.lineTo(1024, canvas.height - 40);
+      ctx.closePath();
+      ctx.fill();
+
+      pipes.forEach(p => {
+        let pipeGrad = ctx.createLinearGradient(p.x, 0, p.x + p.width, 0);
+        pipeGrad.addColorStop(0, "#0f172a");
+        pipeGrad.addColorStop(0.5, "#334155");
+        pipeGrad.addColorStop(1, "#0f172a");
+
+        ctx.fillStyle = pipeGrad;
+        ctx.fillRect(p.x, 0, p.width, p.topHeight);
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(p.x, 0, p.width, p.topHeight);
+        ctx.fillStyle = "#0284c7";
+        ctx.fillRect(p.x - 4, p.topHeight - 20, p.width + 8, 20);
+
+        ctx.fillStyle = pipeGrad;
+        ctx.fillRect(p.x, p.bottomY, p.width, canvas.height - p.bottomY - 40);
+        ctx.strokeStyle = "#38bdf8";
+        ctx.strokeRect(p.x, p.bottomY, p.width, canvas.height - p.bottomY - 40);
+        ctx.fillStyle = "#0284c7";
+        ctx.fillRect(p.x - 4, p.bottomY, p.width + 8, 20);
+      });
+
+      ctx.fillStyle = "#065f46";
+      ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+      ctx.fillStyle = "#10b981";
+      ctx.fillRect(0, canvas.height - 40, canvas.width, 6);
+
+      ctx.save();
+      ctx.translate(bird.x, bird.y);
+      ctx.rotate(bird.rotation);
+
+      if (gameState === "PLAYING" && bird.velocity < 0) {
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.moveTo(-22, 0);
+        ctx.lineTo(-38, -5);
+        ctx.lineTo(-32, 5);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      let birdGrad = ctx.createRadialGradient(-4, -4, 2, 0, 0, bird.radius);
+      birdGrad.addColorStop(0, "#f43f5e");
+      birdGrad.addColorStop(0.7, "#e11d48");
+      birdGrad.addColorStop(1, "#9f1239");
+      
+      ctx.fillStyle = birdGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffe4e6";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.fillStyle = "#fb7185";
+      ctx.beginPath();
+      ctx.ellipse(-4, 4, 10, 6, Math.PI / 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(8, -4, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.arc(10, -5, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#fbbf24";
+      ctx.beginPath();
+      ctx.moveTo(18, -2);
+      ctx.lineTo(28, 2);
+      ctx.lineTo(18, 6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>
