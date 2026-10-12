@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Flappy Apex</title>
 
-  <!-- GameMonetize SDK Integration -->
+  <!-- GameMonetize SDK Integration (Fixed to prevent load-time ads) -->
   <script type="text/javascript">
     window.SDK_OPTIONS = {
         gameId: "5igq4qp23c8ahtj8vqjovus77pfetmms",
@@ -23,6 +23,10 @@
                     console.log("GameMonetize SDK Ready");
                     break;
             }
+        },
+        // Prevents automatic pre-roll ads on initial page load
+        adBreak: function (resolve) {
+            resolve();
         }
     };
     (function (a, b, c) {
@@ -352,7 +356,7 @@
       document.getElementById("gameover-screen").style.display = "flex";
       document.getElementById("final-score").innerText = score;
       
-      // TRIGGER GAMEMONETIZE AD ON GAME OVER
+      // TRIGGER GAMEMONETIZE AD ONLY ON GAME OVER
       if (typeof sdk !== 'undefined' && typeof sdk.showBanner !== 'undefined') {
           sdk.showBanner();
       }
