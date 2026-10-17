@@ -128,18 +128,31 @@
                     <p id="nicknameError" class="text-[10px] text-rose-400 font-semibold h-3"></p>
                 </div>
 
-                <!-- ADSTERRA AD UNIT #1 (300x250) -->
-                <div style="width: 300px; margin: auto; height: 250px; overflow: hidden;">
-                    <script type="text/javascript">
-                        atOptions = {
-                            'key' : '5267016f3019de78e2ae8fa20307c29a',
-                            'format' : 'iframe',
-                            'height' : 250,
-                            'width' : 300,
-                            'params' : {}
-                        };
-                    </script>
-                    <script type="text/javascript" src="https://bauval.org/22/5267016f3019de78e2ae8fa20307c29a"></script>
+                <!-- SANDBOXED ADSTERRA BANNER (NICKNAME SCREEN) -->
+                <div style="width: 300px; height: 250px; margin: auto; overflow: hidden; position: relative;">
+                    <iframe 
+                        srcdoc="
+                            <!DOCTYPE html>
+                            <html>
+                            <head><style>body{margin:0;padding:0;overflow:hidden;display:flex;justify-content:center;align-items:center;}</style></head>
+                            <body>
+                                <script type='text/javascript'>
+                                    atOptions = {
+                                        'key' : '5267016f3019de78e2ae8fa20307c29a',
+                                        'format' : 'iframe',
+                                        'height' : 250,
+                                        'width' : 300,
+                                        'params' : {}
+                                    };
+                                </script>
+                                <script type='text/javascript' src='https://bauval.org/22/5267016f3019de78e2ae8fa20307c29a'></script>
+                            </body>
+                            </html>
+                        "
+                        sandbox="allow-scripts allow-same-origin"
+                        style="width: 300px; height: 250px; border: 0; outline: none; overflow: hidden;"
+                        scrolling="no">
+                    </iframe>
                 </div>
 
                 <button id="saveNicknameBtn" class="pulse-btn w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 via-indigo-600 to-purple-600 font-orbitron font-extrabold text-xs tracking-wider text-white shadow-lg active:scale-95 transition-transform duration-100">
@@ -219,18 +232,31 @@
                     ★ NEW HIGH SCORE ★
                 </div>
 
-                <!-- ADSTERRA AD UNIT #2 (300x250) -->
-                <div style="width: 300px; margin: auto; height: 250px; overflow: hidden;">
-                    <script type="text/javascript">
-                        atOptions = {
-                            'key' : '5267016f3019de78e2ae8fa20307c29a',
-                            'format' : 'iframe',
-                            'height' : 250,
-                            'width' : 300,
-                            'params' : {}
-                        };
-                    </script>
-                    <script type="text/javascript" src="https://bauval.org/22/5267016f3019de78e2ae8fa20307c29a"></script>
+                <!-- SANDBOXED ADSTERRA BANNER (GAME OVER SCREEN) -->
+                <div style="width: 300px; height: 250px; margin: auto; overflow: hidden; position: relative;">
+                    <iframe 
+                        srcdoc="
+                            <!DOCTYPE html>
+                            <html>
+                            <head><style>body{margin:0;padding:0;overflow:hidden;display:flex;justify-content:center;align-items:center;}</style></head>
+                            <body>
+                                <script type='text/javascript'>
+                                    atOptions = {
+                                        'key' : '5267016f3019de78e2ae8fa20307c29a',
+                                        'format' : 'iframe',
+                                        'height' : 250,
+                                        'width' : 300,
+                                        'params' : {}
+                                    };
+                                </script>
+                                <script type='text/javascript' src='https://bauval.org/22/5267016f3019de78e2ae8fa20307c29a'></script>
+                            </body>
+                            </html>
+                        "
+                        sandbox="allow-scripts allow-same-origin"
+                        style="width: 300px; height: 250px; border: 0; outline: none; overflow: hidden;"
+                        scrolling="no">
+                    </iframe>
                 </div>
 
                 <div class="w-full space-y-1">
